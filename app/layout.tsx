@@ -1,10 +1,18 @@
-import type { Metadata, Viewport } from 'next' // <-- Added Viewport here
+
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const geist = Geist({
+  subsets: ['latin'],
+  variable: '--font-geist',
+})
+
+const geistMono = Geist_Mono({
+  subsets: ['latin'],
+  variable: '--font-geist-mono',
+})
 
 export const metadata: Metadata = {
   title: 'Coal Mine Operations Center',
@@ -27,10 +35,8 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
-  // Note: themeColor and viewport were removed from here
 }
 
-// <-- New Viewport export added here
 export const viewport: Viewport = {
   themeColor: '#7553e1',
   width: 'device-width',
@@ -41,15 +47,19 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="en" className="light">
-      <body className="font-sans antialiased bg-background text-foreground">
+    <html
+      lang="en"
+      className={`${geist.variable} ${geistMono.variable} light`}
+    >
+      <body className="font-sans antialiased bg-background text-foreground overflow-x-hidden">
         {children}
         <Analytics />
       </body>
     </html>
   )
 }
+

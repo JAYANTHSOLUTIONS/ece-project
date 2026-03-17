@@ -1,7 +1,7 @@
 'use client';
 
 import { SystemEvent } from '@/lib/types';
-import { AlertTriangle, AlertCircle, Info, Filter } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, Filter, Clock, Activity } from 'lucide-react';
 import { useState } from 'react';
 
 interface AlertsViewProps {
@@ -18,27 +18,26 @@ export function AlertsView({ events }: AlertsViewProps) {
       case 'critical':
         return {
           bg: 'bg-red-50',
-          border: 'border-red-300',
+          border: 'border-red-500',
           icon: AlertTriangle,
           iconColor: 'text-red-600',
-          badge: 'bg-red-100 text-red-800',
+          badge: 'bg-red-600 text-white',
         };
       case 'warning':
         return {
           bg: 'bg-orange-50',
-          border: 'border-orange-300',
+          border: 'border-orange-500',
           icon: AlertCircle,
           iconColor: 'text-orange-600',
-          badge: 'bg-orange-100 text-orange-800',
+          badge: 'bg-orange-500 text-white',
         };
-      case 'info':
       default:
         return {
-          bg: 'bg-purple-50',
-          border: 'border-purple-300',
+          bg: 'bg-slate-50',
+          border: 'border-slate-200',
           icon: Info,
           iconColor: 'text-purple-600',
-          badge: 'bg-purple-100 text-purple-800',
+          badge: 'bg-slate-800 text-white',
         };
     }
   };
@@ -50,87 +49,100 @@ export function AlertsView({ events }: AlertsViewProps) {
   };
 
   return (
-    <div className="space-y-6 lg:ml-64">
-      {/* Header with Stats */}
-      <div className="bg-white border border-purple-200 rounded-lg p-6 card-shadow">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-1">System Alerts</h2>
-            <p className="text-gray-600">Total {events.length} event{events.length !== 1 ? 's' : ''}</p>
-          </div>
-          <Filter className="w-6 h-6 text-purple-600" />
+    /* ✅ FIXED: Removed lg:ml-64 and added w-full p-8. Now sits flush with sidebar. */
+    <div className="w-full p-8 space-y-10">
+      
+      {/* INDUSTRIAL HEADER */}
+      <div className="flex items-end justify-between border-b-2 border-slate-200 pb-6">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">
+            System Event Log
+          </h2>
+          <p className="text-xs font-bold text-purple-600 mt-2 uppercase tracking-widest italic">
+            Centralized Safety Monitoring Hub
+          </p>
         </div>
-
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-2">
-          {[
-            { id: 'all', label: 'All Events', count: events.length, color: 'bg-gray-100 text-gray-800' },
-            { id: 'critical', label: 'Critical', count: severityStats.critical, color: 'bg-red-100 text-red-800' },
-            { id: 'warning', label: 'Warning', count: severityStats.warning, color: 'bg-orange-100 text-orange-800' },
-            { id: 'info', label: 'Info', count: severityStats.info, color: 'bg-purple-100 text-purple-800' },
-          ].map((filter) => (
-            <button
-              key={filter.id}
-              onClick={() => setFilterSeverity(filter.id as any)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                filterSeverity === filter.id
-                  ? filter.color + ' ring-2 ring-offset-2 ring-purple-600'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {filter.label}
-              <span className="ml-2 font-bold">{filter.count}</span>
-            </button>
-          ))}
+        <div className="flex gap-4">
+           <div className="bg-slate-900 text-white px-4 py-2 rounded-xl flex items-center gap-3">
+              <Activity className="w-4 h-4 text-green-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest">{events.length} TOTAL LOGS</span>
+           </div>
         </div>
       </div>
 
-      {/* Events Timeline */}
-      {filteredEvents.length > 0 ? (
-        <div className="space-y-3">
-          {filteredEvents.map((event, index) => {
+      {/* FILTER CONTROLS */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { id: 'all', label: 'Global Feed', count: events.length, color: 'border-slate-200 text-slate-900' },
+          { id: 'critical', label: 'Critical Alerts', count: severityStats.critical, color: 'border-red-500 text-red-600 bg-red-50' },
+          { id: 'warning', label: 'Risk Warnings', count: severityStats.warning, color: 'border-orange-500 text-orange-600 bg-orange-50' },
+          { id: 'info', label: 'System Info', count: severityStats.info, color: 'border-purple-500 text-purple-600 bg-purple-50' },
+        ].map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFilterSeverity(f.id as any)}
+            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-start gap-1 shadow-sm ${
+              filterSeverity === f.id ? f.color + ' ring-4 ring-purple-100' : 'bg-white border-slate-100 text-slate-400 hover:border-purple-200'
+            }`}
+          >
+            <span className="text-[10px] font-black uppercase tracking-tighter">{f.label}</span>
+            <span className="text-2xl font-black">{f.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* TIMELINE FEED */}
+      <div className="space-y-4">
+        {filteredEvents.length > 0 ? (
+          filteredEvents.map((event, index) => {
             const style = getEventStyle(event.severity);
             const IconComponent = style.icon;
 
             return (
               <div
                 key={index}
-                className={`${style.bg} border ${style.border} rounded-lg p-4 transition-all hover:shadow-md`}
+                className={`${style.bg} border-l-8 ${style.border} rounded-2xl p-6 transition-all shadow-sm flex items-center gap-6`}
               >
-                <div className="flex gap-4">
-                  {/* Icon */}
-                  <div className="flex-shrink-0 pt-1">
-                    <IconComponent className={`w-5 h-5 ${style.iconColor}`} />
-                  </div>
+                {/* Visual Indicator */}
+                <div className={`p-4 rounded-2xl bg-white shadow-inner ${style.iconColor}`}>
+                   <IconComponent className="w-6 h-6" />
+                </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{event.message}</p>
-                        <p className="text-sm text-gray-600 mt-1">Worker ID: {event.workerId}</p>
-                      </div>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${style.badge} whitespace-nowrap`}>
-                        {event.severity.toUpperCase()}
-                      </span>
-                    </div>
-
-                    {/* Timestamp */}
-                    <p className="text-xs text-gray-500 mt-2">
+                {/* Event Message - WIDE LAYOUT */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${style.badge}`}>
+                      {event.severity}
+                    </span>
+                    <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase">
+                      <Clock className="w-3.5 h-3.5" />
                       {new Date(event.timestamp).toLocaleString()}
-                    </p>
+                    </div>
+                  </div>
+                  <h4 className="text-xl font-black text-slate-900 tracking-tight leading-none">
+                    {event.message}
+                  </h4>
+                  <div className="mt-2 flex items-center gap-4">
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                       Origin: <span className="text-purple-600">{event.workerName || 'LoRa Gateway'}</span>
+                     </span>
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">
+                       ID: {event.workerId || 'Hub-01'}
+                     </span>
                   </div>
                 </div>
               </div>
             );
-          })}
-        </div>
-      ) : (
-        <div className="bg-white border border-purple-200 rounded-lg p-12 card-shadow text-center">
-          <Info className="w-12 h-12 text-purple-300 mx-auto mb-4" />
-          <p className="text-gray-600 font-medium">No {filterSeverity === 'all' ? 'events' : filterSeverity + ' events'} at this time</p>
-        </div>
-      )}
+          })
+        ) : (
+          <div className="bg-slate-100 border-2 border-dashed border-slate-200 rounded-[3rem] p-24 text-center">
+            <Info className="w-16 h-16 text-slate-300 mx-auto mb-6" />
+            <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-sm">
+              Clear Skies: No {filterSeverity === 'all' ? '' : filterSeverity} events recorded
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

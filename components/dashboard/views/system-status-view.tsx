@@ -1,7 +1,8 @@
 'use client';
 
 import { EnvironmentalMetrics, Worker } from '@/lib/types';
-import { Thermometer, Wind, Clock, Radio, Signal, Zap, Activity } from 'lucide-react';
+import { Thermometer, Wind, Radio, Signal, Zap, Activity, Cpu } from 'lucide-react';
+import { WorkerManager } from '../worker-manager'; // ✅ Import the new SQLite Manager
 
 interface SystemStatusViewProps {
   metrics: EnvironmentalMetrics;
@@ -11,235 +12,159 @@ interface SystemStatusViewProps {
 export function SystemStatusView({ metrics, workers }: SystemStatusViewProps) {
   const getStatusBadge = (value: number, thresholds: { safe: number; warning: number }) => {
     if (value >= thresholds.warning) {
-      return { color: 'bg-red-100 text-red-800', text: 'CRITICAL' };
+      return { color: 'bg-red-600 text-white', text: 'CRITICAL' };
     }
     if (value >= thresholds.safe) {
-      return { color: 'bg-orange-100 text-orange-800', text: 'WARNING' };
+      return { color: 'bg-orange-500 text-white', text: 'WARNING' };
     }
-    return { color: 'bg-green-100 text-green-800', text: 'SAFE' };
+    return { color: 'bg-green-500 text-white', text: 'NOMINAL' };
   };
 
   const tempStatus = getStatusBadge(metrics.avgTemperature, { safe: 40, warning: 45 });
   const gasStatus = getStatusBadge(metrics.maxGasLevel, { safe: 500, warning: 700 });
 
-  // Calculate signal strengths
   const avgSignal = Math.round(
     workers.reduce((sum, w) => sum + w.rssi, 0) / (workers.length || 1)
   );
 
   const getSignalQuality = (rssi: number) => {
-    if (rssi > -50) return { text: 'Excellent', color: 'text-green-600' };
-    if (rssi > -70) return { text: 'Good', color: 'text-blue-600' };
-    if (rssi > -85) return { text: 'Fair', color: 'text-orange-600' };
-    return { text: 'Poor', color: 'text-red-600' };
+    if (rssi > -50) return { text: 'Excellent', color: 'text-green-500' };
+    if (rssi > -70) return { text: 'Stable', color: 'text-blue-500' };
+    if (rssi > -85) return { text: 'Weak', color: 'text-orange-500' };
+    return { text: 'Critical', color: 'text-red-500' };
   };
 
   return (
-    <div className="space-y-6 lg:ml-64">
-      {/* Environmental Monitoring */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Temperature Monitoring */}
-        <div className="bg-white border border-purple-200 rounded-lg p-6 card-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <Thermometer className="w-6 h-6 text-orange-600" />
-            <h3 className="text-lg font-bold text-gray-900">Temperature Monitoring</h3>
+    /* ✅ FIXED: Page is now flush with the sidebar (No lg:ml-64) */
+    <div className="w-full p-8 space-y-12 bg-slate-50/30">
+      
+      {/* SECTION HEADER */}
+      <div className="flex items-end justify-between border-b-2 border-slate-200 pb-6">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">
+            Network & Infrastructure
+          </h2>
+          <p className="text-xs font-bold text-purple-600 mt-2 uppercase tracking-widest italic">
+            Hardware Health & Database Management
+          </p>
+        </div>
+        <div className="bg-slate-900 text-white px-4 py-2 rounded-xl flex items-center gap-3">
+          <Cpu className="w-4 h-4 text-purple-400" />
+          <span className="text-[10px] font-black uppercase tracking-widest italic">Gateway v2.4</span>
+        </div>
+      </div>
+
+      {/* 1. ENVIRONMENTAL ANALYTICS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Temperature Monitor */}
+        <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <Thermometer className="w-8 h-8 text-orange-500" />
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Thermal Grid</h3>
+            </div>
+            <span className={`text-[10px] font-black px-4 py-1.5 rounded-full ${tempStatus.color}`}>
+              {tempStatus.text}
+            </span>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Average Temperature</p>
-                <p className="text-4xl font-bold text-gray-900">{metrics.avgTemperature.toFixed(1)}°C</p>
-              </div>
-              <span className={`text-xs font-bold px-3 py-1 rounded-full ${tempStatus.color}`}>
-                {tempStatus.text}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 pt-4 border-t border-purple-100">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Min</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {Math.min(...workers.map((w) => w.temperature)).toFixed(1)}°C
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Max</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {Math.max(...workers.map((w) => w.temperature)).toFixed(1)}°C
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Safe</p>
-                <p className="text-lg font-semibold text-green-600">&lt;40°C</p>
-              </div>
-            </div>
+          <div className="flex items-baseline gap-4 mb-8">
+            <p className="text-6xl font-black text-slate-900 tracking-tighter">{metrics.avgTemperature.toFixed(1)}°</p>
+            <span className="text-slate-400 font-bold uppercase text-xs italic">Avg Ambient</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+             <div className="text-center border-r border-slate-200"><p className="text-[10px] font-bold text-slate-400 uppercase">Min</p><p className="font-black">{Math.min(...workers.map(w => w.temperature)).toFixed(1)}°</p></div>
+             <div className="text-center border-r border-slate-200"><p className="text-[10px] font-bold text-slate-400 uppercase">Max</p><p className="font-black">{Math.max(...workers.map(w => w.temperature)).toFixed(1)}°</p></div>
+             <div className="text-center"><p className="text-[10px] font-bold text-slate-400 uppercase">Limit</p><p className="font-black text-green-600">40.0°</p></div>
           </div>
         </div>
 
-        {/* Gas Level Monitoring */}
-        <div className="bg-white border border-purple-200 rounded-lg p-6 card-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <Wind className="w-6 h-6 text-purple-600" />
-            <h3 className="text-lg font-bold text-gray-900">Gas Level Monitoring</h3>
+        {/* Gas Monitor */}
+        <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <Wind className="w-8 h-8 text-blue-500" />
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Gas Detection</h3>
+            </div>
+            <span className={`text-[10px] font-black px-4 py-1.5 rounded-full ${gasStatus.color}`}>
+              {gasStatus.text}
+            </span>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Max Gas Concentration</p>
-                <p className="text-4xl font-bold text-gray-900">{metrics.maxGasLevel}ppm</p>
-              </div>
-              <span className={`text-xs font-bold px-3 py-1 rounded-full ${gasStatus.color}`}>
-                {gasStatus.text}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 pt-4 border-t border-purple-100">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Min</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {Math.min(...workers.map((w) => w.gasLevel))}ppm
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Avg</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {Math.round(
-                    workers.reduce((sum, w) => sum + w.gasLevel, 0) / (workers.length || 1)
-                  )}ppm
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Safe</p>
-                <p className="text-lg font-semibold text-green-600">&lt;500ppm</p>
-              </div>
-            </div>
+          <div className="flex items-baseline gap-4 mb-8">
+            <p className="text-6xl font-black text-slate-900 tracking-tighter">{metrics.maxGasLevel}</p>
+            <span className="text-slate-400 font-bold uppercase text-xs italic">Max PPM (MQ-9)</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+             <div className="text-center border-r border-slate-200"><p className="text-[10px] font-bold text-slate-400 uppercase">Avg</p><p className="font-black">{Math.round(workers.reduce((s,w) => s+w.gasLevel,0)/workers.length)}</p></div>
+             <div className="text-center border-r border-slate-200"><p className="text-[10px] font-bold text-slate-400 uppercase">Peak</p><p className="font-black">{metrics.maxGasLevel}</p></div>
+             <div className="text-center"><p className="text-[10px] font-bold text-slate-400 uppercase">Safety</p><p className="font-black text-green-600">500</p></div>
           </div>
         </div>
       </div>
 
-      {/* Gateway & Communication */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gateway Status */}
-        <div className="bg-white border border-purple-200 rounded-lg p-6 card-shadow">
-          <div className="flex items-center gap-3 mb-6">
-            <Radio className="w-6 h-6 text-purple-600" />
-            <h3 className="text-lg font-bold text-gray-900">LoRa Gateway</h3>
+      {/* 2. NETWORK & LORA STATUS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white border-2 border-purple-100 rounded-[2.5rem] p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-8">
+            <Radio className="w-8 h-8 text-purple-600" />
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Gateway Feed</h3>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-              <div>
-                <p className="font-semibold text-gray-900">Status</p>
-                <p className="text-sm text-gray-600">All systems operational</p>
-              </div>
-              <div className="w-3 h-3 bg-green-600 rounded-full animate-pulse" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <p className="text-xs text-gray-600 mb-1">Frequency</p>
-                <p className="font-semibold text-gray-900">433 MHz</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <p className="text-xs text-gray-600 mb-1">Spreading Factor</p>
-                <p className="font-semibold text-gray-900">SF 12</p>
-              </div>
-            </div>
-
-            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <p className="text-xs text-gray-600 mb-1">Connected Nodes</p>
-              <p className="text-2xl font-bold text-gray-900">{workers.length} / {workers.length}</p>
-            </div>
+          <div className="p-6 bg-green-50 rounded-3xl border-2 border-green-100 flex justify-between items-center mb-6">
+             <div><p className="font-black text-slate-900">Uplink Stable</p><p className="text-[10px] font-bold text-slate-500 uppercase">Cloud Handshake Verified</p></div>
+             <div className="w-3 h-3 bg-green-500 rounded-full animate-ping" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center"><p className="text-[10px] font-black text-slate-400 uppercase">Freq</p><p className="font-black">433.0 MHz</p></div>
+             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center"><p className="text-[10px] font-black text-slate-400 uppercase">Factor</p><p className="font-black">SF 12</p></div>
           </div>
         </div>
 
-        {/* Signal Quality */}
-        <div className="bg-white border border-purple-200 rounded-lg p-6 card-shadow">
-          <div className="flex items-center gap-3 mb-6">
-            <Signal className="w-6 h-6 text-blue-600" />
-            <h3 className="text-lg font-bold text-gray-900">Signal Quality</h3>
+        <div className="bg-white border-2 border-blue-100 rounded-[2.5rem] p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-8">
+            <Signal className="w-8 h-8 text-blue-600" />
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Mesh Quality</h3>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-end justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Avg Signal Strength</p>
-                <p className="text-3xl font-bold text-gray-900">{avgSignal}dBm</p>
-              </div>
-              <div className={`text-right`}>
-                <p className={`font-semibold ${getSignalQuality(avgSignal).color}`}>
-                  {getSignalQuality(avgSignal).text}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-gray-700">Distribution by Quality</p>
-              <div className="space-y-2">
-                {[
-                  {
-                    quality: 'Excellent',
-                    range: '> -50',
-                    count: workers.filter((w) => w.rssi > -50).length,
-                    color: 'bg-green-100 text-green-800',
-                  },
-                  {
-                    quality: 'Good',
-                    range: '-50 to -70',
-                    count: workers.filter((w) => w.rssi > -70 && w.rssi <= -50).length,
-                    color: 'bg-blue-100 text-blue-800',
-                  },
-                  {
-                    quality: 'Fair',
-                    range: '-70 to -85',
-                    count: workers.filter((w) => w.rssi > -85 && w.rssi <= -70).length,
-                    color: 'bg-orange-100 text-orange-800',
-                  },
-                  {
-                    quality: 'Poor',
-                    range: '< -85',
-                    count: workers.filter((w) => w.rssi <= -85).length,
-                    color: 'bg-red-100 text-red-800',
-                  },
-                ].map((stat) => (
-                  <div key={stat.quality} className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">{stat.quality}</span>
-                    <span className={`text-xs font-bold px-2 py-1 rounded ${stat.color}`}>
-                      {stat.count} node{stat.count !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="p-6 bg-blue-50 rounded-3xl border-2 border-blue-100 flex justify-between items-end mb-6">
+             <div><p className="text-[10px] font-black text-slate-400 uppercase">Avg RSSI</p><p className="text-4xl font-black font-mono">{avgSignal} dBm</p></div>
+             <span className={`text-lg font-black uppercase italic ${getSignalQuality(avgSignal).color}`}>{getSignalQuality(avgSignal).text}</span>
+          </div>
+          <div className="space-y-2">
+             <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase"><span>Strength Distribution</span><span>{workers.length} Nodes</span></div>
+             <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                <div className="h-full bg-green-500" style={{ width: '60%' }} />
+                <div className="h-full bg-blue-500" style={{ width: '30%' }} />
+                <div className="h-full bg-orange-500" style={{ width: '10%' }} />
+             </div>
           </div>
         </div>
       </div>
 
-      {/* System Information */}
-      <div className="bg-white border border-purple-200 rounded-lg p-6 card-shadow">
-        <div className="flex items-center gap-3 mb-4">
-          <Activity className="w-6 h-6 text-purple-600" />
-          <h3 className="text-lg font-bold text-gray-900">System Information</h3>
+      {/* 3. ✅ SQLITE DATABASE & NODE MANAGEMENT */}
+      <div className="pt-8 border-t-4 border-slate-900">
+        <div className="flex items-center gap-3 mb-8">
+          <Zap className="w-8 h-8 text-purple-600" />
+          <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Node Database Management</h3>
         </div>
+        <WorkerManager workers={workers} />
+      </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <p className="text-xs text-gray-600 mb-2">Uptime</p>
-            <p className="font-mono font-bold text-gray-900">{metrics.systemUptime}</p>
+      {/* 4. SYSTEM INFO STRIP */}
+      <div className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="p-6 bg-white/5 rounded-3xl border border-white/10 text-center">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Uptime</p>
+            <p className="text-lg font-black font-mono text-purple-400 truncate">{metrics.systemUptime}</p>
           </div>
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <p className="text-xs text-gray-600 mb-2">Active Workers</p>
-            <p className="text-2xl font-bold text-gray-900">{metrics.activeWorkers}</p>
+          <div className="p-6 bg-white/5 rounded-3xl border border-white/10 text-center">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Telemetry Rate</p>
+            <p className="text-3xl font-black">{workers.length * 7}<span className="text-xs ml-1 opacity-40">p/s</span></p>
           </div>
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <p className="text-xs text-gray-600 mb-2">Data Points</p>
-            <p className="text-2xl font-bold text-gray-900">{workers.length * 6}</p>
+          <div className="p-6 bg-white/5 rounded-3xl border border-white/10 text-center">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Database Index</p>
+            <p className="text-3xl font-black">{workers.length}</p>
           </div>
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <p className="text-xs text-gray-600 mb-2">Update Rate</p>
-            <p className="font-mono font-bold text-gray-900">3s</p>
+          <div className="p-6 bg-white/5 rounded-3xl border border-white/10 text-center">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Sync Cycle</p>
+            <p className="text-3xl font-black">3000<span className="text-xs ml-1 opacity-40">ms</span></p>
           </div>
         </div>
       </div>
